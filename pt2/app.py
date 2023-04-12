@@ -32,6 +32,8 @@ messages = {
 @app.route("/user/<user>")
 def show_user(user):
     escuser = markupsafe.escape(user)
+    if escuser not in users:
+        flask.abort(404)
     return f"User {escuser}"
 
 
