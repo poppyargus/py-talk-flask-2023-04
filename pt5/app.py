@@ -1,9 +1,11 @@
 import os
 import typing as T
+import dataclasses
 from dataclasses import dataclass
 
 import flask
 import markupsafe
+import chevron
 
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
@@ -32,6 +34,10 @@ messages = {
         },
     ],
 }
+
+
+def get_file_dir():
+    return os.path.dirname(os.path.realpath(__file__))
 
 
 @dataclass(frozen=True)
@@ -64,25 +70,8 @@ def get_body_params(
 
 
 def get_body_template(params: ParamsBody) -> str:
-    # TODO: intentionally looks bad (all nav), for now
-    return f"""
-<!doctype html>
-<title>{params.title}</title>
-<nav>
-  <h1><a href="{params.url_for_index}">index</a></h1>
-  <ul>
-      <li><a href="{params.url_for_user}">user {params.user}</a>
-      <li><a href="{params.url_for_logout}">logout</a>
-      <li><a href="{params.url_for_login}">login</a>
-  </ul>
-</nav>
-<section class="content">
-  <header>
-      {params.header}
-  </header>
-  {params.content}
-</section>
-    """
+    with open(get_file_dir() + "/templates/base.html.mustache", "r") as f:
+        return chevron.render(f, dataclasses.asdict(params))
 
 
 def get_auth_template_header() -> str:
@@ -90,24 +79,13 @@ def get_auth_template_header() -> str:
 
 
 def get_auth_template_content() -> str:
-    return """
-  <form method="post">
-    <label for="username">Username</label>
-    <input name="username" id="username" required>
-    <label for="password">Password</label>
-    <input type="password" name="password" id="password" required>
-    <input type="submit" value="Log In">
-  </form>
-    """
+    with open(get_file_dir() + "/templates/login.content.html", "r") as f:
+        return f.read()
 
 
 def get_user_template_content(messages: list[dict[str, str]]) -> str:
-    # TODO: intentionally looks bad (array), for now;
-    return f"""
-  <div class="messages">
-  {messages}
-  </div>
-    """
+    with open(get_file_dir() + "/templates/user.content.html.mustache", "r") as f:
+        return chevron.render(f, {"messages": messages})
 
 
 @app.post("/login")
@@ -146,7 +124,7 @@ def user_msg(user: T.Optional[str] = None):
     user = markupsafe.escape(user) if user is not None else None
     if user not in users:
         flask.abort(404)
-    if user != markupsafe.escape(flask.session.get("user")):
+    if user != flask.session.get("user"):
         flask.abort(403)
     content = get_user_template_content(messages[user])
     header = f"User {user}"

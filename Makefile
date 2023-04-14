@@ -25,5 +25,8 @@ pt3:
 pt4:
 	venv/bin/flask --app pt4/app.py run
 
-.PHONY: install clean lint pt1 pt2 pt3 pt4
+pt5:
+	venv/bin/flask --app pt5/app.py run
+
+.PHONY: install clean lint pt1 pt2 pt3 pt4 pt5
 

@@ -77,12 +77,6 @@ def get_user_template_content(messages: list[str]) -> str:
     """
 
 
-@app.route("/logout")
-def logout():
-    flask.session.clear()
-    return flask.redirect(flask.url_for("index"))
-
-
 @app.route("/user/<user>")
 def user_msg(user):
     user = markupsafe.escape(user)
