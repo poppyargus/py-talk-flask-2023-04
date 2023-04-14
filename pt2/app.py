@@ -3,26 +3,27 @@ import markupsafe
 
 app = flask.Flask(__name__)
 
+
 users = [
-    "poppyargus2023+sec1@calmspark.org",
-    "poppyargus2023+sec2@calmspark.org",
+    "a",
+    "b",
 ]
 
 creds = {
-    "poppyargus2023+sec1@calmspark.org": "1234",
-    "poppyargus2023+sec2@calmspark.org": "1234",
+    "a": "1234",
+    "b": "1234",
 }
 
 messages = {
-    "poppyargus2023+sec1@calmspark.org": [
+    "a": [
         {
-            "from": "poppyargus2023+sec2@calmspark.org",
+            "from": "b",
             "msg": "hey",
         },
     ],
-    "poppyargus2023+sec2@calmspark.org": [
+    "b": [
         {
-            "from": "poppyargus2023+sec1@calmspark.org",
+            "from": "a",
             "msg": "weird to write myself for a demo in front of an audience?",
         },
     ],
