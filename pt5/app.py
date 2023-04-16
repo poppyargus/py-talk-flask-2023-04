@@ -124,7 +124,7 @@ def get_user_template_content(messages: list[dict[str, str]]) -> str:
 @app.route("/user")
 @app.route("/user/<user>")
 def user_msg(user: T.Optional[str] = None):
-    user = markupsafe.escape(user) if user is not None else None
+    user = str(markupsafe.escape(user)) if user is not None else None
     if user not in users:
         flask.abort(404)
     if user != flask.session.get("user"):
@@ -132,7 +132,9 @@ def user_msg(user: T.Optional[str] = None):
     content = get_user_template_content(messages[user])
     header = f"User {user}"
     params = get_body_params("user", header, content, user)
-    return get_body_template(params)
+    result = get_body_template(params)
+    # print(result)  # this is how I debugged the markupsafe issue
+    return result
 
 
 # auth: login & logout
