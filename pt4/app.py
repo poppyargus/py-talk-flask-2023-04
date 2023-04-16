@@ -154,5 +154,3 @@ def login_get():
 def logout():
     flask.session.clear()
     return flask.redirect(flask.url_for("index"))
-
-

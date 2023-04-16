@@ -115,7 +115,7 @@ def user_msg(user: T.Optional[str] = None):
     if user != flask.session.get("user"):
         flask.abort(403)
     content = get_user_template_content(messages[user])
-    header = f"User messages"
+    header = "User messages"
     params = get_body_params("user", header, content, user)
     return get_body_template(params)
 
@@ -161,5 +161,3 @@ def login_get():
 def logout():
     flask.session.clear()
     return flask.redirect(flask.url_for("index"))
-
-

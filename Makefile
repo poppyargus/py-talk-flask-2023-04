@@ -10,7 +10,7 @@ clean:
 
 lint:
 	venv/bin/flake8 --exclude venv .
-	venv/bin/mypy --exclude venv .
+	venv/bin/mypy --install-types --non-interactive --exclude venv .
 
 # could i have done w vars? yes. Worth the time when I'm on deadline? no.
 pt1:
