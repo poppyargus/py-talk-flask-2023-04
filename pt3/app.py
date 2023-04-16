@@ -4,8 +4,14 @@ from dataclasses import dataclass
 import flask
 import markupsafe
 
+# pt1: add app, serve index
+# pt2: add "messaging" and "user"
+# pt3: add "HTML"
+
 app = flask.Flask(__name__)
 
+
+# "messaging"
 
 users = [
     "a",
@@ -31,6 +37,9 @@ messages = {
         },
     ],
 }
+
+
+# index
 
 
 @dataclass(frozen=True)
@@ -75,7 +84,10 @@ def index():
     return get_body_template(params)
 
 
-def get_user_template_content(messages: list[str]) -> str:
+# user
+
+
+def get_user_template_content(messages: list[dict[str, str]]) -> str:
     # TODO: intentionally looks bad (array), for now;
     return f"""
 <div class="messages">
@@ -84,9 +96,10 @@ def get_user_template_content(messages: list[str]) -> str:
     """
 
 
+@app.route("/user")
 @app.route("/user/<user>")
-def user_msg(user):
-    user = markupsafe.escape(user)
+def user_msg(user: T.Optional[str] = None):
+    user = markupsafe.escape(user) if user is not None else None
     if user not in users:
         flask.abort(404)
     content = get_user_template_content(messages[user])

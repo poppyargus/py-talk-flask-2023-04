@@ -1,8 +1,13 @@
 import flask
 import markupsafe
 
+# pt1: add app, serve index
+# pt2: add "messaging" and "user"
+
 app = flask.Flask(__name__)
 
+
+# "messaging"
 
 users = [
     "a",
@@ -30,15 +35,23 @@ messages = {
 }
 
 
+# index
+
+
+
 @app.route("/")
 def index():
     msg = "<p>Hello, World!</p>"
     return msg
 
 
+# user
+
+
+@app.route("/user")
 @app.route("/user/<user>")
-def show_user(user):
-    escuser = markupsafe.escape(user)
-    if escuser not in users:
+def user_msg(user: T.Optional[str] = None):
+    user = markupsafe.escape(user) if user is not None else None
+    if user not in users:
         flask.abort(404)
     return f"User {escuser} {messages[user]}"

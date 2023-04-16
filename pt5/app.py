@@ -7,8 +7,17 @@ import flask
 import markupsafe
 import chevron
 
+# pt1: add app, serve index
+# pt2: add "messaging" and "user"
+# pt3: add "HTML"
+# pt4: add login & Session
+# pt5: add mustache formatted templating via chevron library
+
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+
+
+# "messaging"
 
 users = [
     "a",
@@ -35,6 +44,8 @@ messages = {
     ],
 }
 
+
+# index
 
 @dataclass(frozen=True)
 class ParamsBody:
@@ -98,15 +109,19 @@ def index():
     return get_body_template(params)
 
 
+# user
+
 def get_user_template_content(messages: list[dict[str, str]]) -> str:
+    # TODO: could look much better; later
     tmpl = """
-    <div class="messages">
-    {{{messages}}}
-    </div>
+<div class="messages">
+{{{messages}}}
+</div>
     """
     return chevron.render(tmpl, {"messages": messages})
 
 
+@app.route("/user")
 @app.route("/user/<user>")
 def user_msg(user: T.Optional[str] = None):
     user = markupsafe.escape(user) if user is not None else None
@@ -115,13 +130,16 @@ def user_msg(user: T.Optional[str] = None):
     if user != flask.session.get("user"):
         flask.abort(403)
     content = get_user_template_content(messages[user])
-    header = "User messages"
+    header = f"User {user}"
     params = get_body_params("user", header, content, user)
     return get_body_template(params)
 
 
+# auth: login & logout
+
+
 def get_auth_template_content() -> str:
-    tmpl = """
+    return """
 <form method="post">
     <label for="username">Username</label>
     <input name="username" id="username" required>
@@ -130,7 +148,6 @@ def get_auth_template_content() -> str:
     <input type="submit" value="Log In">
 </form>
     """
-    return tmpl
 
 
 @app.post("/login")
@@ -143,7 +160,7 @@ def login_post():
         flask.session.clear()
         flask.session["user"] = user
     content = get_auth_template_content()
-    header = "login"
+    header = "Log In"
     params = get_body_params("index", header, content, user)
     return get_body_template(params)
 

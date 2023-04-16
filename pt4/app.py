@@ -5,8 +5,16 @@ from dataclasses import dataclass
 import flask
 import markupsafe
 
+# pt1: add app, serve index
+# pt2: add "messaging" and "user"
+# pt3: add "HTML"
+# pt4: add login & Session
+
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+
+
+# "messaging"
 
 users = [
     "a",
@@ -32,6 +40,9 @@ messages = {
         },
     ],
 }
+
+
+# index
 
 
 @dataclass(frozen=True)
@@ -92,21 +103,25 @@ def index():
     return get_body_template(params)
 
 
+# user
+
+
 def get_user_template_content(messages: list[dict[str, str]]) -> str:
     # TODO: intentionally looks bad (array), for now;
     return f"""
-  <div class="messages">
-  {messages}
-  </div>
+<div class="messages">
+{messages}
+</div>
     """
 
 
+@app.route("/user")
 @app.route("/user/<user>")
 def user_msg(user: T.Optional[str] = None):
     user = markupsafe.escape(user) if user is not None else None
     if user not in users:
         flask.abort(404)
-    if user != markupsafe.escape(flask.session.get("user")):
+    if user != flask.session.get("user"):
         flask.abort(403)
     content = get_user_template_content(messages[user])
     header = f"User {user}"
@@ -114,15 +129,18 @@ def user_msg(user: T.Optional[str] = None):
     return get_body_template(params)
 
 
+# auth: login & logout
+
+
 def get_auth_template_content() -> str:
     return """
-  <form method="post">
+<form method="post">
     <label for="username">Username</label>
     <input name="username" id="username" required>
     <label for="password">Password</label>
     <input type="password" name="password" id="password" required>
     <input type="submit" value="Log In">
-  </form>
+</form>
     """
 
 
