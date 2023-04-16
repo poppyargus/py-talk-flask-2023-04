@@ -36,8 +36,6 @@ messages = {
 
 @dataclass(frozen=True)
 class ParamsBody:
-    """class for body template renders"""
-
     title: str
     url_for_index: str
     url_for_login: str
@@ -69,24 +67,51 @@ def get_body_template(params: ParamsBody) -> str:
 <!doctype html>
 <title>{params.title}</title>
 <nav>
-  <h1><a href="{params.url_for_index}">index</a></h1>
-  <ul>
-      <li><a href="{params.url_for_user}">user {params.user}</a>
-      <li><a href="{params.url_for_logout}">logout</a>
-      <li><a href="{params.url_for_login}">login</a>
-  </ul>
+    <h1><a href="{params.url_for_index}">index</a></h1>
+    <ul>
+        <li><a href="{params.url_for_user}">user {params.user}</a>
+        <li><a href="{params.url_for_logout}">logout</a>
+        <li><a href="{params.url_for_login}">login</a>
+    </ul>
 </nav>
 <section class="content">
-  <header>
-      {params.header}
-  </header>
-  {params.content}
+    <header>
+        {params.header}
+    </header>
+    {params.content}
 </section>
     """
 
 
-def get_auth_template_header() -> str:
-    return "Log In"
+@app.route("/")
+def index():
+    content = "Hello, World!"
+    header = "index"
+    user = flask.session.get("user")
+    params = get_body_params("index", header, content, user)
+    return get_body_template(params)
+
+
+def get_user_template_content(messages: list[dict[str, str]]) -> str:
+    # TODO: intentionally looks bad (array), for now;
+    return f"""
+  <div class="messages">
+  {messages}
+  </div>
+    """
+
+
+@app.route("/user/<user>")
+def user_msg(user: T.Optional[str] = None):
+    user = markupsafe.escape(user) if user is not None else None
+    if user not in users:
+        flask.abort(404)
+    if user != markupsafe.escape(flask.session.get("user")):
+        flask.abort(403)
+    content = get_user_template_content(messages[user])
+    header = f"User {user}"
+    params = get_body_params("user", header, content, user)
+    return get_body_template(params)
 
 
 def get_auth_template_content() -> str:
@@ -101,15 +126,6 @@ def get_auth_template_content() -> str:
     """
 
 
-def get_user_template_content(messages: list[dict[str, str]]) -> str:
-    # TODO: intentionally looks bad (array), for now;
-    return f"""
-  <div class="messages">
-  {messages}
-  </div>
-    """
-
-
 @app.post("/login")
 def login_post():
     user = flask.request.form.get("username")
@@ -120,7 +136,7 @@ def login_post():
         flask.session.clear()
         flask.session["user"] = user
     content = get_auth_template_content()
-    header = get_auth_template_header()
+    header = "Log In"
     params = get_body_params("index", header, content, user)
     return get_body_template(params)
 
@@ -140,24 +156,3 @@ def logout():
     return flask.redirect(flask.url_for("index"))
 
 
-@app.route("/user")
-@app.route("/user/<user>")
-def user_msg(user: T.Optional[str] = None):
-    user = markupsafe.escape(user) if user is not None else None
-    if user not in users:
-        flask.abort(404)
-    if user != markupsafe.escape(flask.session.get("user")):
-        flask.abort(403)
-    content = get_user_template_content(messages[user])
-    header = f"User {user}"
-    params = get_body_params("user", header, content, user)
-    return get_body_template(params)
-
-
-@app.route("/")
-def index():
-    content = "Hello, World!"
-    header = "index"
-    user = flask.session.get("user")
-    params = get_body_params("index", header, content, user)
-    return get_body_template(params)

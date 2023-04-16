@@ -30,15 +30,15 @@ messages = {
 }
 
 
+@app.route("/")
+def index():
+    msg = "<p>Hello, World!</p>"
+    return msg
+
+
 @app.route("/user/<user>")
 def show_user(user):
     escuser = markupsafe.escape(user)
     if escuser not in users:
         flask.abort(404)
-    return f"User {escuser}"
-
-
-@app.route("/")
-def root():
-    msg = "<p>Hello, World!</p>"
-    return msg
+    return f"User {escuser} {messages[user]}"

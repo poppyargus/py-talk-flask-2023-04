@@ -36,14 +36,8 @@ messages = {
 }
 
 
-def get_file_dir():
-    return os.path.dirname(os.path.realpath(__file__))
-
-
 @dataclass(frozen=True)
 class ParamsBody:
-    """class for body template renders"""
-
     title: str
     url_for_index: str
     url_for_login: str
@@ -70,22 +64,73 @@ def get_body_params(
 
 
 def get_body_template(params: ParamsBody) -> str:
-    with open(get_file_dir() + "/templates/base.html.mustache", "r") as f:
-        return chevron.render(f, dataclasses.asdict(params))
+    tmpl = """
+<!doctype html>
+<title>{{title}}</title>
+<nav>
+    <h1><a href="{{url_for_index}}">index</a></h1>
+    <ul>
+        {{#user}}
+            <li><a href="{{url_for_user}}">user {{user}}</a>
+            <li><a href="{{url_for_logout}}">logout</a>
+        {{/user}}
+        {{^user}}
+            <li><a href="{{url_for_login}}">login</a>
+        {{/user}}
+    </ul>
+</nav>
+<section class="content">
+    <header>
+        {{{header}}}
+    </header>
+    {{{content}}}
+</section>
+    """
+    return chevron.render(tmpl, dataclasses.asdict(params))
 
 
-def get_auth_template_header() -> str:
-    return "Log In"
-
-
-def get_auth_template_content() -> str:
-    with open(get_file_dir() + "/templates/login.content.html", "r") as f:
-        return f.read()
+@app.route("/")
+def index():
+    content = "Hello, World!"
+    header = "index"
+    user = flask.session.get("user")
+    params = get_body_params("index", header, content, user)
+    return get_body_template(params)
 
 
 def get_user_template_content(messages: list[dict[str, str]]) -> str:
-    with open(get_file_dir() + "/templates/user.content.html.mustache", "r") as f:
-        return chevron.render(f, {"messages": messages})
+    tmpl = """
+    <div class="messages">
+    {{{messages}}}
+    </div>
+    """
+    return chevron.render(tmpl, {"messages": messages})
+
+
+@app.route("/user/<user>")
+def user_msg(user: T.Optional[str] = None):
+    user = markupsafe.escape(user) if user is not None else None
+    if user not in users:
+        flask.abort(404)
+    if user != flask.session.get("user"):
+        flask.abort(403)
+    content = get_user_template_content(messages[user])
+    header = f"User messages"
+    params = get_body_params("user", header, content, user)
+    return get_body_template(params)
+
+
+def get_auth_template_content() -> str:
+    tmpl = """
+<form method="post">
+    <label for="username">Username</label>
+    <input name="username" id="username" required>
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" required>
+    <input type="submit" value="Log In">
+</form>
+    """
+    return tmpl
 
 
 @app.post("/login")
@@ -98,7 +143,7 @@ def login_post():
         flask.session.clear()
         flask.session["user"] = user
     content = get_auth_template_content()
-    header = get_auth_template_header()
+    header = "login"
     params = get_body_params("index", header, content, user)
     return get_body_template(params)
 
@@ -118,24 +163,3 @@ def logout():
     return flask.redirect(flask.url_for("index"))
 
 
-@app.route("/user")
-@app.route("/user/<user>")
-def user_msg(user: T.Optional[str] = None):
-    user = markupsafe.escape(user) if user is not None else None
-    if user not in users:
-        flask.abort(404)
-    if user != flask.session.get("user"):
-        flask.abort(403)
-    content = get_user_template_content(messages[user])
-    header = f"User {user}"
-    params = get_body_params("user", header, content, user)
-    return get_body_template(params)
-
-
-@app.route("/")
-def index():
-    content = "Hello, World!"
-    header = "index"
-    user = flask.session.get("user")
-    params = get_body_params("index", header, content, user)
-    return get_body_template(params)

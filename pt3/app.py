@@ -6,6 +6,7 @@ import markupsafe
 
 app = flask.Flask(__name__)
 
+
 users = [
     "a",
     "b",
@@ -34,8 +35,6 @@ messages = {
 
 @dataclass(frozen=True)
 class ParamsBody:
-    """class for body template renders"""
-
     title: str
     url_for_index: str
     header: T.Optional[str]
@@ -57,23 +56,31 @@ def get_body_template(params: ParamsBody) -> str:
 <!doctype html>
 <title>{params.title}</title>
 <nav>
-  <h1><a href="{params.url_for_index}">index</a></h1>
+    <h1><a href="{params.url_for_index}">index</a></h1>
 </nav>
 <section class="content">
-  <header>
-      {params.header}
-  </header>
-  {params.content}
+    <header>
+        {params.header}
+    </header>
+    {params.content}
 </section>
     """
+
+
+@app.route("/")
+def index():
+    content = "Hello, World!"
+    header = "index"
+    params = get_body_params("index", header, content)
+    return get_body_template(params)
 
 
 def get_user_template_content(messages: list[str]) -> str:
     # TODO: intentionally looks bad (array), for now;
     return f"""
-  <div class="messages">
-  {messages}
-  </div>
+<div class="messages">
+{messages}
+</div>
     """
 
 
@@ -85,12 +92,4 @@ def user_msg(user):
     content = get_user_template_content(messages[user])
     header = f"User {user}"
     params = get_body_params("user", header, content)
-    return get_body_template(params)
-
-
-@app.route("/")
-def index():
-    content = "Hello, World!"
-    header = "index"
-    params = get_body_params("index", header, content)
     return get_body_template(params)
