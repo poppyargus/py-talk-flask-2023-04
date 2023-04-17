@@ -14,6 +14,7 @@ import chevron
 # pt4: add login & Session
 # pt5: add mustache formatted templating via chevron library
 # pt6: add testing NOTE: always at bottom. New code below others, above test
+# pt7: add storage abstraction
 
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
@@ -22,30 +23,94 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 # "messaging"
 
 
-users = [
-    "a",
-    "b",
-]
+users: list[str] = []
 
-creds = {
-    "a": "1234",
-    "b": "1234",
-}
 
-messages = {
-    "a": [
-        {
-            "from": "b",
-            "msg": "hey",
-        },
-    ],
-    "b": [
-        {
-            "from": "a",
-            "msg": "weird to write myself for a demo in front of an audience?",
-        },
-    ],
-}
+def get_user(user: str) -> bool:
+    if user in users:
+        return True
+    return False
+
+
+def add_user(user: str) -> None:
+    if user in users:
+        return
+    users.append(user)
+
+
+def seed_users():
+    add_user("a")
+    add_user("b")
+
+
+creds: dict[str, str] = {}
+
+
+def get_cred(user: str) -> T.Optional[str]:
+    return creds.get(user)
+
+
+def set_cred(user: str, cred: str) -> None:
+    if not get_user(user):
+        raise ValueError("Can't add a cred for a non-existant user")
+    # TODO: fabulous place for (external) cred complexity validation
+    creds[user] = cred
+
+
+def check_cred(user: str, cred_in: str) -> bool:
+    # TODO: auth will get separated from storage at some point
+    cred = get_cred(user)
+    # print(user, cred_in, cred)  # NOTE: for debugging fail (missed seed)
+    if cred_in == cred:
+        return True
+    return False
+
+
+def seed_creds():
+    set_cred("a", "1234")
+    set_cred("b", "1234")
+
+
+@dataclass(frozen=True)
+class Message:
+    frm: str
+    msg: str
+
+
+messages: dict[str, list[Message]] = {}
+
+
+def get_messages(user: str) -> T.Optional[list[Message]]:
+    return messages.get(user)
+
+
+def add_message(user: str, msg: Message) -> None:
+    # NOTE: mutation for the in-memory case, but generally "add to list"
+    msgs = messages.get(user)
+    if msgs is None:
+        msgs = []
+        messages[user] = msgs
+    msgs.append(msg)
+
+
+def seed_messages():
+    add_message("a", Message("b", "hey"))
+    add_message(
+        "b",
+        Message(
+            "a", "weird to write myself for a demo in front of an audience?"
+        ),
+    )
+
+
+def seed():
+    seed_users()
+    seed_creds()
+    seed_messages()
+
+
+# yup, it's all been a global. Someday soon...
+seed()
 
 
 # index
@@ -116,7 +181,7 @@ def index():
 # user
 
 
-def get_user_template_content(messages: list[dict[str, str]]) -> str:
+def get_user_template_content(messages: list[Message]) -> str:
     # TODO: could look much better; later
     tmpl = """
 <div class="messages">
@@ -130,11 +195,11 @@ def get_user_template_content(messages: list[dict[str, str]]) -> str:
 @app.route("/user/<user>")
 def user_msg(user: T.Optional[str] = None):
     user = str(markupsafe.escape(user)) if user is not None else None
-    if user not in users:
+    if not get_user(user):
         flask.abort(404)
     if user != flask.session.get("user"):
         flask.abort(403)
-    content = get_user_template_content(messages[user])
+    content = get_user_template_content(get_messages(user))
     header = f"User {user}"
     params = get_body_params("user", header, content, user)
     result = get_body_template(params)
@@ -163,9 +228,10 @@ def login_post():
     pswd = flask.request.form.get("password")
     if user is None:
         flask.abort(403)
-    if creds[user] == pswd:
+    if check_cred(user, pswd):
         flask.session.clear()
         flask.session["user"] = user
+    return flask.redirect(flask.url_for("index"))
     content = get_auth_template_content()
     header = "Log In"
     params = get_body_params("index", header, content, user)

@@ -49,5 +49,9 @@ pt5:
 .PHONY: pt5
 
 pt6:
-	venv/bin/flask --app pt5/app.py run
+	venv/bin/flask --app pt6/app.py run
 .PHONY: pt6
+
+pt7:
+	venv/bin/flask --app pt7/app.py run
+.PHONY: pt7
