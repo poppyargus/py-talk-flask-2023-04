@@ -188,7 +188,7 @@ def logout():
 # test
 
 
-def test_integration__get_body_template__success_has_user_has_logout():
+def test_integration__get_body_template__success_w_user():
     user = "abcdefg"
     # can't use helper - it calls flask, doesn't work outside an `app`!
     # params = get_body_params("", "", "", user)
@@ -197,6 +197,15 @@ def test_integration__get_body_template__success_has_user_has_logout():
     result = get_body_template(params)
     assert "logout" in result
     assert user in result
+
+
+def test_integration__get_body_template__success_wo_user():
+    user = None
+    _ = ""
+    params = ParamsBody(_, _, _, _, _, _, _, user)
+    result = get_body_template(params)
+    assert "login" in result
+    assert str(user) not in result
 
 
 @pytest.mark.skip(reason="fails on purpose")
