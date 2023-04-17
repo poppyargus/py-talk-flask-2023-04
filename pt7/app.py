@@ -21,7 +21,9 @@ app = flask.Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
 
-def get_sto_flask():
+def get_storage_flask():
+    # Not my favorite pattern, but from Flask docs,
+    # and lifecycle hooks are deprecated
     if "storage" not in flask.g:
         sto = StorageMem()
         seed(sto)
@@ -225,7 +227,7 @@ def get_user_template_content(messages: list[Message]) -> str:
 @app.route("/user/<user>")
 def user_msg(user: T.Optional[str] = None):
     user = str(markupsafe.escape(user)) if user is not None else None
-    sto = get_sto_flask()
+    sto = get_storage_flask()
     if not sto.get_user(user):
         flask.abort(404)
     if user != flask.session.get("user"):
@@ -257,7 +259,7 @@ def get_auth_template_content() -> str:
 def login_post():
     user = flask.request.form.get("username")
     pswd = flask.request.form.get("password")
-    sto = get_sto_flask()
+    sto = get_storage_flask()
     if user is None:
         flask.abort(403)
     if check_cred(sto, user, pswd):
@@ -288,26 +290,28 @@ def logout():
 # test
 
 
-def get_sto_test():
+def test_unit__get_user__fail_missing():
     sto = StorageMem()
-    seed(sto)
-    return sto
+    assert not sto.get_user("a")
 
 
-def test_unit__get_user__success():
-    sto = get_sto_test()
+def test_unit__add_user__get_user_success():
+    sto = StorageMem()
+    sto.add_user("a")
     assert sto.get_user("a")
 
 
-def test_unit__get_user__fail_missing():
-    sto = get_sto_test()
-    assert not sto.get_user("z")
+def test_unit__get_cred__fail_missing():
+    sto = StorageMem()
+    sto.add_user("a")
+    assert not sto.get_cred("a")
 
 
-def test_unit__add_user__success():
-    sto = get_sto_test()
-    sto.add_user("c")
-    assert sto.get_user("c")
+def test_unit__set_cred__get_cred_success():
+    sto = StorageMem()
+    sto.add_user("a")
+    sto.set_cred("a", "1234")
+    assert sto.get_cred("a") == "1234"
 
 
 def test_integration__get_body_template__success_w_user():

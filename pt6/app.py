@@ -2,8 +2,8 @@ import os
 import typing as T
 import dataclasses
 from dataclasses import dataclass
-import pytest  # WARN: normally do not do this in prod code
 
+import pytest  # WARN: normally do not do this in prod code
 import flask
 import markupsafe
 import chevron
