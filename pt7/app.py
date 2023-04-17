@@ -2,8 +2,9 @@ import os
 import typing as T
 import dataclasses
 from dataclasses import dataclass
-import pytest  # WARN: normally do not do this in prod code
+import abc
 
+import pytest  # WARN: normally do not do this in prod code
 import flask
 import markupsafe
 import chevron
@@ -20,55 +21,15 @@ app = flask.Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
 
-# "messaging"
+def get_sto_flask():
+    if "storage" not in flask.g:
+        sto = StorageMem()
+        seed(sto)
+        flask.g.storage = sto
+    return flask.g.storage
 
 
-users: list[str] = []
-
-
-def get_user(user: str) -> bool:
-    if user in users:
-        return True
-    return False
-
-
-def add_user(user: str) -> None:
-    if user in users:
-        return
-    users.append(user)
-
-
-def seed_users():
-    add_user("a")
-    add_user("b")
-
-
-creds: dict[str, str] = {}
-
-
-def get_cred(user: str) -> T.Optional[str]:
-    return creds.get(user)
-
-
-def set_cred(user: str, cred: str) -> None:
-    if not get_user(user):
-        raise ValueError("Can't add a cred for a non-existant user")
-    # TODO: fabulous place for (external) cred complexity validation
-    creds[user] = cred
-
-
-def check_cred(user: str, cred_in: str) -> bool:
-    # TODO: auth will get separated from storage at some point
-    cred = get_cred(user)
-    # print(user, cred_in, cred)  # NOTE: for debugging fail (missed seed)
-    if cred_in == cred:
-        return True
-    return False
-
-
-def seed_creds():
-    set_cred("a", "1234")
-    set_cred("b", "1234")
+# "messaging" with storage
 
 
 @dataclass(frozen=True)
@@ -77,25 +38,90 @@ class Message:
     msg: str
 
 
-messages: dict[str, list[Message]] = {}
+# "Abstract base class"; not really OOP. Typeclassing - this is "interface"
+# Avoid hierarchic implementation details. `super` is your sign. Use if needed
+class Storage(abc.ABC):
+    @abc.abstractmethod
+    def get_user(self, user: str) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def add_user(self, user: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def get_cred(self, user: str) -> T.Optional[str]:
+        pass
+
+    @abc.abstractmethod
+    def set_cred(self, user: str, cred: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def get_messages(self, user: str) -> T.Optional[list[Message]]:
+        pass
+
+    @abc.abstractmethod
+    def add_message(self, user: str, msg: Message) -> None:
+        pass
 
 
-def get_messages(user: str) -> T.Optional[list[Message]]:
-    return messages.get(user)
+# not really OOP, impl of iface, in a land with no interfaces or typeclass...
+# (although kind of a weird conversation; in the ways used here, equivalent)
+class StorageMem:
+    def __init__(self) -> None:
+        self.users: list[str] = []
+        self.creds: dict[str, str] = {}
+        self.messages: dict[str, list[Message]] = {}
+
+    def get_user(self, user: str) -> bool:
+        if user in self.users:
+            return True
+        return False
+
+    def add_user(self, user: str) -> None:
+        if user in self.users:
+            return
+        self.users.append(user)
+
+    def get_cred(self, user: str) -> T.Optional[str]:
+        return self.creds.get(user)
+
+    def set_cred(self, user: str, cred: str) -> None:
+        if not self.get_user(user):
+            raise ValueError("Can't add a cred for a non-existant user")
+        # TODO: fabulous place for (external) cred complexity validation
+        self.creds[user] = cred
+
+    def get_messages(self, user: str) -> T.Optional[list[Message]]:
+        return self.messages.get(user)
+
+    def add_message(self, user: str, msg: Message) -> None:
+        # NOTE: mutation for the in-memory case, but generally "add to list"
+        msgs = self.messages.get(user)
+        if msgs is None:
+            msgs = []
+            self.messages[user] = msgs
+        msgs.append(msg)
 
 
-def add_message(user: str, msg: Message) -> None:
-    # NOTE: mutation for the in-memory case, but generally "add to list"
-    msgs = messages.get(user)
-    if msgs is None:
-        msgs = []
-        messages[user] = msgs
-    msgs.append(msg)
+# Yes; it is really not inheritance.
+Storage.register(StorageMem)
 
 
-def seed_messages():
-    add_message("a", Message("b", "hey"))
-    add_message(
+def seed_users(sto: Storage):
+    sto.add_user("a")
+    sto.add_user("b")
+
+
+def seed_creds(sto: Storage):
+    sto.set_cred("a", "1234")
+    sto.set_cred("b", "1234")
+
+
+def seed_messages(sto: Storage):
+    sto.add_message("a", Message("b", "hey"))
+    sto.add_message(
         "b",
         Message(
             "a", "weird to write myself for a demo in front of an audience?"
@@ -103,14 +129,18 @@ def seed_messages():
     )
 
 
-def seed():
-    seed_users()
-    seed_creds()
-    seed_messages()
+def seed(sto: Storage):
+    seed_users(sto)
+    seed_creds(sto)
+    seed_messages(sto)
 
 
-# yup, it's all been a global. Someday soon...
-seed()
+def check_cred(sto: Storage, user: str, cred_in: str) -> bool:
+    cred = sto.get_cred(user)
+    # print(user, cred_in, cred)  # NOTE: for debugging fail (missed seed)
+    if cred_in == cred:
+        return True
+    return False
 
 
 # index
@@ -129,7 +159,7 @@ class ParamsBody:
 
 
 def get_body_params(
-    title: str, header: str, content: str, user: str
+    title: str, header: str, content: str, user: T.Optional[str]
 ) -> ParamsBody:
     return ParamsBody(
         title,
@@ -195,11 +225,12 @@ def get_user_template_content(messages: list[Message]) -> str:
 @app.route("/user/<user>")
 def user_msg(user: T.Optional[str] = None):
     user = str(markupsafe.escape(user)) if user is not None else None
-    if not get_user(user):
+    sto = get_sto_flask()
+    if not sto.get_user(user):
         flask.abort(404)
     if user != flask.session.get("user"):
         flask.abort(403)
-    content = get_user_template_content(get_messages(user))
+    content = get_user_template_content(sto.get_messages(user))
     header = f"User {user}"
     params = get_body_params("user", header, content, user)
     result = get_body_template(params)
@@ -226,9 +257,10 @@ def get_auth_template_content() -> str:
 def login_post():
     user = flask.request.form.get("username")
     pswd = flask.request.form.get("password")
+    sto = get_sto_flask()
     if user is None:
         flask.abort(403)
-    if check_cred(user, pswd):
+    if check_cred(sto, user, pswd):
         flask.session.clear()
         flask.session["user"] = user
     return flask.redirect(flask.url_for("index"))
@@ -254,6 +286,28 @@ def logout():
 
 
 # test
+
+
+def get_sto_test():
+    sto = StorageMem()
+    seed(sto)
+    return sto
+
+
+def test_unit__get_user__success():
+    sto = get_sto_test()
+    assert sto.get_user("a")
+
+
+def test_unit__get_user__fail_missing():
+    sto = get_sto_test()
+    assert not sto.get_user("z")
+
+
+def test_unit__add_user__success():
+    sto = get_sto_test()
+    sto.add_user("c")
+    assert sto.get_user("c")
 
 
 def test_integration__get_body_template__success_w_user():
