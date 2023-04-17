@@ -2,6 +2,7 @@ import os
 import typing as T
 import dataclasses
 from dataclasses import dataclass
+import pytest  # WARN: normally do not do this in prod code
 
 import flask
 import markupsafe
@@ -182,12 +183,21 @@ def logout():
     flask.session.clear()
     return flask.redirect(flask.url_for("index"))
 
+
 # test
 
 
-def test_pass():
-    pass
+def test_integration__get_body_template__success_has_user_has_logout():
+    user = "abcdefg"
+    # can't use helper - it calls flask, doesn't work outside an `app`!
+    # params = get_body_params("", "", "", user)
+    _ = ""
+    params = ParamsBody(_, _, _, _, _, _, _, user)
+    result = get_body_template(params)
+    assert "logout" in result
+    assert user in result
 
 
+@pytest.mark.skip(reason="fails on purpose")
 def test_fail():
     raise ValueError("ALWAYS BLUE: yellow")

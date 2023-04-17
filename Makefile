@@ -21,7 +21,7 @@ lint:
 
 test:
 	# TODO: this is janky, but everything is in one file for demo purposes
-	venv/bin/pytest pt*/*.py
+	venv/bin/pytest pt*/app.py
 
 black:
 	venv/bin/black --line-length 79 pt*
