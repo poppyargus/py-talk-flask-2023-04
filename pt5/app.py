@@ -47,6 +47,7 @@ messages = {
 
 # index
 
+
 @dataclass(frozen=True)
 class ParamsBody:
     title: str
@@ -110,6 +111,7 @@ def index():
 
 
 # user
+
 
 def get_user_template_content(messages: list[dict[str, str]]) -> str:
     # TODO: could look much better; later
