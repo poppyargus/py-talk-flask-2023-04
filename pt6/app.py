@@ -166,10 +166,7 @@ def login_post():
     if creds[user] == pswd:
         flask.session.clear()
         flask.session["user"] = user
-    content = get_auth_template_content()
-    header = "Log In"
-    params = get_body_params("index", header, content, user)
-    return get_body_template(params)
+    return flask.redirect(flask.url_for("index"))
 
 
 @app.get("/login")

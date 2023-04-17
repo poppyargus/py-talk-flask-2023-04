@@ -266,10 +266,6 @@ def login_post():
         flask.session.clear()
         flask.session["user"] = user
     return flask.redirect(flask.url_for("index"))
-    content = get_auth_template_content()
-    header = "Log In"
-    params = get_body_params("index", header, content, user)
-    return get_body_template(params)
 
 
 @app.get("/login")
