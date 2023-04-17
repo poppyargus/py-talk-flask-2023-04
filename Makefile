@@ -19,6 +19,10 @@ lint:
 	venv/bin/mypy --install-types --non-interactive --exclude venv .
 .PHONY: lint
 
+test:
+	# TODO: this is janky, but everything is in one file for demo purposes
+	venv/bin/pytest pt*/*.py
+
 black:
 	venv/bin/black --line-length 79 pt*
 .PHONY: black
@@ -43,3 +47,7 @@ pt4:
 pt5:
 	venv/bin/flask --app pt5/app.py run
 .PHONY: pt5
+
+pt6:
+	venv/bin/flask --app pt5/app.py run
+.PHONY: pt6
