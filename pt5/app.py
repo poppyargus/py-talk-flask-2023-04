@@ -155,6 +155,15 @@ def get_auth_template_content() -> str:
     """
 
 
+@app.get("/login")
+def login_get():
+    content = get_auth_template_content()
+    header = "login"
+    user = flask.session.get("user")
+    params = get_body_params("index", header, content, user)
+    return get_body_template(params)
+
+
 @app.post("/login")
 def login_post():
     user = flask.request.form.get("username")
@@ -165,15 +174,6 @@ def login_post():
         flask.session.clear()
         flask.session["user"] = user
     return flask.redirect(flask.url_for("index"))
-
-
-@app.get("/login")
-def login_get():
-    content = get_auth_template_content()
-    header = "login"
-    user = flask.session.get("user")
-    params = get_body_params("index", header, content, user)
-    return get_body_template(params)
 
 
 @app.route("/logout")
